@@ -20,10 +20,11 @@ export default function initMiroAPI() {
   return {
     miro: new Miro({
       storage: {
-        get: () => {
-          return getCookieValue();
+        get: async () => {
+          const state = getCookieValue();
+          return state ?? undefined;
         },
-        set: (_, state) => {
+        set: async (state) => {
           cookieInstance.set(tokensCookie, JSON.stringify(state), {
             path: '/',
             httpOnly: true,
