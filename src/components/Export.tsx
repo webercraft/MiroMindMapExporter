@@ -98,7 +98,7 @@ async function exportMindmap(itemId: string, format: string) {
     console.log('\n=== EXTRACTED MINDMAP DATA ===');
     console.log(JSON.stringify(mindmapData, null, 2));
 
-    const exportResponse = await fetch('/api/export', {
+    const exportResponse = await fetch(`/api/export?format=${format}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -237,6 +237,7 @@ export const Export: FC = () => {
           <option value="svg">SVG</option>
           <option value="csv">CSV</option>
           <option value="markdown">Markdown</option>
+          <option value="opml">OPML</option>
         </select>
       </div>
 

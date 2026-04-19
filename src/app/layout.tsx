@@ -16,13 +16,8 @@ export default function RootLayout({children}: PropsWithChildren) {
         <MiroSDKInit />
         <div id="root">
           <div className="grid">
-            <div className="cs1 ce12">
-              <Export />
-            </div>
-            <hr className="cs1 ce12" />
             <div className="cs1 ce12">{children}</div>
             <hr className="cs1 ce12" />
-           
           </div>
         </div>
       </body>
