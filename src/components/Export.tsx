@@ -133,7 +133,7 @@ async function exportMindmap(itemId: string, format: string) {
   }
 }
 
-export const Export: FC = () => {
+export const Export: FC<{ creditsDisabled?: boolean; onExportSuccess?: () => void }> = ({ creditsDisabled = false, onExportSuccess }) => {
   const [selectedFormat, setSelectedFormat] = useState('csv');
   const [selectedItem, setSelectedItem] = useState<string>('No item selected');
   const [itemType, setItemType] = useState<'table' | 'mindmap' | 'other' | 'none'>('none');
@@ -175,6 +175,11 @@ export const Export: FC = () => {
   }, []);
 
   const handleExport = async () => {
+    if (creditsDisabled) {
+      alert('You have no credits remaining. Please upgrade your plan.');
+      return;
+    }
+
     if (!selectedItemId) {
       alert('Please select an item to export');
       return;
@@ -186,12 +191,20 @@ export const Export: FC = () => {
     }
 
     setIsExporting(true);
-    await exportMindmap(selectedItemId, selectedFormat);
+    const success = await exportMindmap(selectedItemId, selectedFormat);
+    if (success && onExportSuccess) {
+      onExportSuccess();
+    }
     setIsExporting(false);
   };
 
   return (
     <div style={{padding: '20px'}}>
+      {creditsDisabled && (
+        <div style={{ padding: '10px', backgroundColor: '#f8d7da', color: '#721c24', marginBottom: '16px', borderRadius: '4px', border: '1px solid #f5c6cb', fontWeight: 600 }}>
+          🚫 You have no credits remaining. Upgrade your plan to continue exporting.
+        </div>
+      )}
       <div className="banner" style={{ padding: '10px', backgroundColor: '#f0f0f0', marginBottom: '20px', borderRadius: '4px' }}>
         <p style={{ margin: 0 }}>Select item in board to export</p>
       </div>
@@ -245,7 +258,7 @@ export const Export: FC = () => {
         type="button"
         onClick={handleExport}
         className="button button-primary"
-        disabled={isExporting || itemType === 'none' || itemType === 'other'}
+        disabled={isExporting || itemType === 'none' || itemType === 'other' || creditsDisabled}
       >
         {isExporting ? 'Exporting...' : 'Export'}
       </button>

@@ -19,7 +19,7 @@ const dropzoneStyles = {
   minHeight: '200px',
 } as const;
 
-export const Import: FC = () => {
+export const Import: FC<{ creditsDisabled?: boolean; onImportSuccess?: () => void }> = ({ creditsDisabled = false, onImportSuccess }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string>('');
@@ -38,6 +38,10 @@ export const Import: FC = () => {
   });
 
   const handleCreate = async () => {
+    if (creditsDisabled) {
+      setError('You have no credits remaining. Please upgrade your plan.');
+      return;
+    }
     setIsCreating(true);
     setError('');
     setSuccess('');
@@ -48,6 +52,7 @@ export const Import: FC = () => {
         const contents = await parseCsv(file);
         await createMindmap(contents);
         setSuccess(`Mind map created successfully from ${file.name}`);
+        if (onImportSuccess) onImportSuccess();
       } catch (e) {
         failed.push(file);
         console.error(e);
@@ -77,6 +82,11 @@ export const Import: FC = () => {
   return (
     <div style={{padding: '20px'}}>
       <h2>Import Mind Map from CSV</h2>
+      {creditsDisabled && (
+        <div style={{ padding: '10px', backgroundColor: '#f8d7da', color: '#721c24', marginBottom: '16px', borderRadius: '4px', border: '1px solid #f5c6cb', fontWeight: 600 }}>
+          🚫 You have no credits remaining. Upgrade your plan to continue importing.
+        </div>
+      )}
       <p style={{marginBottom: '20px', fontSize: '14px', color: '#666'}}>
         Select your CSV file to import it as a mind map
       </p>
@@ -107,8 +117,13 @@ export const Import: FC = () => {
         </div>
       )}
 
-      <div {...dropzone.getRootProps({style})}>
-        <input {...dropzone.getInputProps()} />
+      <div {...(!creditsDisabled ? dropzone.getRootProps({style}) : {})} style={{
+        ...style,
+        opacity: creditsDisabled ? 0.5 : 1,
+        cursor: creditsDisabled ? 'not-allowed' : 'pointer',
+        pointerEvents: creditsDisabled ? 'none' : 'auto',
+      }}>
+        <input {...(!creditsDisabled ? dropzone.getInputProps() : {})} disabled={creditsDisabled} />
         {dropzone.isDragAccept ? (
           <p style={{margin: 0}}>Drop your CSV file here</p>
         ) : (
@@ -118,6 +133,7 @@ export const Import: FC = () => {
                 type="button"
                 className="button button-primary button-small"
                 style={{marginBottom: '10px'}}
+                disabled={creditsDisabled}
               >
                 Select CSV file
               </button>
@@ -144,7 +160,7 @@ export const Import: FC = () => {
           <button
             onClick={handleCreate}
             className="button button-primary"
-            disabled={isCreating}
+            disabled={isCreating || creditsDisabled}
             style={{width: '100%'}}
           >
             {isCreating ? 'Creating Mind Map...' : 'Create Mind Map'}
