@@ -13,6 +13,7 @@ export const MindMapManager: FC = () => {
   const [usedCredits, setUsedCredits] = useState<number | null>(null);
   const [totalCredits, setTotalCredits] = useState<number | null>(null);
   const [creditsLoading, setCreditsLoading] = useState(true);
+  const [hasPaid, setHasPaid] = useState(false);
 
   const fetchCredits = async () => {
     try {
@@ -20,6 +21,7 @@ export const MindMapManager: FC = () => {
       const data = await res.json();
       setUsedCredits(data.used_credits ?? 0);
       setTotalCredits(data.total_credits ?? 0);
+      setHasPaid(!!(data.record?.[0]?.hasPaid));
     } catch (e) {
       console.error('Failed to fetch credits:', e);
     } finally {
@@ -87,7 +89,7 @@ export const MindMapManager: FC = () => {
               onClick={() => setShowUpgrade(true)}
               style={{
                 padding: '5px 12px',
-                backgroundColor: '#4262ff',
+                backgroundColor: hasPaid ? '#6c757d' : '#4262ff',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '6px',
@@ -98,7 +100,7 @@ export const MindMapManager: FC = () => {
                 flexShrink: 0,
               }}
             >
-              Upgrade Now
+              {hasPaid ? '⚙ Settings' : 'Upgrade Now'}
             </button>
           </>
         )}
@@ -107,7 +109,7 @@ export const MindMapManager: FC = () => {
       {/* Upgrade Page Overlay */}
       {showUpgrade ? (
         <div style={{flex: 1, overflow: 'auto'}}>
-          <Upgrade onBack={() => setShowUpgrade(false)} />
+          <Upgrade onBack={() => setShowUpgrade(false)} hasPaid={hasPaid} />
         </div>
       ) : (
         <>

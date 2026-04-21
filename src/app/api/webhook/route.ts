@@ -34,19 +34,49 @@ export async function POST(req: NextRequest) {
     const user_id = session.client_reference_id;
     const email = session.customer_details?.email ?? null;
 
-    const { error } = await supabase.from(process.env.UserTable!).upsert(
-      {
-        hasPaid: true,
-        user_id: user_id,
-        email: email,
-        stripe_json: session,           // you can store the whole session if needed
-        customer_id: session.customer as string | null,
-      },
-      { onConflict: 'user_id' }
-    );
+    console.log('Checkout session completed for user_id:', user_id, 'email:', email);
 
-    if (error) {
-      console.error('Supabase upsert error (checkout completed):', error);
+    // Check if user already exists
+    const { data: existing } = await supabase
+      .from(process.env.UserTable!)
+      .select('user_id')
+      .eq('user_id', user_id)
+      .single();
+
+    if (existing) {
+      // Update existing user
+      const { error } = await supabase
+        .from(process.env.UserTable!)
+        .update({
+          hasPaid: true,
+          email: email,
+          stripe_json: session,
+          customer_id: session.customer as string | null,
+          total_credits: 100,
+          used_credits: 100,
+        })
+        .eq('user_id', user_id);
+
+      if (error) {
+        console.error('Supabase update error (checkout completed):', error);
+      }
+    } else {
+      // Insert new user
+      const { error } = await supabase
+        .from(process.env.UserTable!)
+        .insert({
+          hasPaid: true,
+          user_id: user_id,
+          email: email,
+          stripe_json: session,
+          customer_id: session.customer as string | null,
+          total_credits: 100,
+          used_credits: 100,
+        });
+
+      if (error) {
+        console.error('Supabase insert error (checkout completed):', error);
+      }
     }
   }
 
@@ -56,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabase
       .from(process.env.UserTable!)
-      .update({ hasPaid: false })
+      .update({ hasPaid: false, total_credits: 3, used_credits: 3 })
       .eq('customer_id', subscription.customer);
 
     if (error) {

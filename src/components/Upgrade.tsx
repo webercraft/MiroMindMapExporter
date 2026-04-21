@@ -1,5 +1,6 @@
 'use client';
-import { FC, useState } from 'react';
+import { FC, useState, useEffect } from 'react';
+import { fetchApi } from '../utils/fetchApi';
 
 interface Plan {
   name: string;
@@ -28,15 +29,42 @@ const plans: Plan[] = [
   },
 ];
 
-export const Upgrade: FC<{ onBack: () => void }> = ({ onBack }) => {
+export const Upgrade: FC<{ onBack: () => void; hasPaid?: boolean }> = ({ onBack, hasPaid = false }) => {
   const [error, setError] = useState<string>('');
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [userId, setUserId] = useState<string>('');
+
+  // Fetch current Miro user ID
+  useEffect(() => {
+    miro.board.getUserInfo().then((info) => setUserId(info.id)).catch(() => {});
+  }, []);
+
+  const handleSubscription = async () => {
+    setSubscriptionLoading(true);
+    try {
+      const response = await fetchApi('/api/billing');
+      const billdata = await response.json();
+      window.open(billdata.data.url, '_blank');
+    } catch (e) {
+      setError('Failed to open billing portal. Please try again.');
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
 
   const handleUpgrade = async (plan: Plan) => {
     if (!plan.paymentLink) {
       setError('This plan is not configured yet. Please contact support.');
       return;
     }
-    window.open(plan.paymentLink, '_blank');
+    try {
+      const userInfo = await miro.board.getUserInfo();
+      const userId = userInfo.id;
+      window.open(`${plan.paymentLink}?client_reference_id=${userId}&utm_source=miro-app-panel`, '_blank');
+    } catch {
+      // Fallback if getUserInfo fails
+      window.open(`${plan.paymentLink}?utm_source=miro-app-panel`, '_blank');
+    }
   };
 
   return (
@@ -59,10 +87,10 @@ export const Upgrade: FC<{ onBack: () => void }> = ({ onBack }) => {
         </button>
         <div>
           <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1a1a2e' }}>
-            Upgrade Your Plan
+            {hasPaid ? 'Subscription Settings' : 'Upgrade Your Plan'}
           </h2>
           <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
-            Choose a plan that fits your needs
+            {hasPaid ? 'Manage your active subscription' : 'Choose a plan that fits your needs'}
           </p>
         </div>
       </div>
@@ -81,8 +109,10 @@ export const Upgrade: FC<{ onBack: () => void }> = ({ onBack }) => {
         </div>
       )}
 
-      {/* Plan Cards */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* Plan Cards — only shown when not yet paid */}
+      {!hasPaid && (
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         {plans.map((plan) => (
           <div
             key={plan.name}
@@ -158,11 +188,51 @@ export const Upgrade: FC<{ onBack: () => void }> = ({ onBack }) => {
             </button>
           </div>
         ))}
-      </div>
+          </div>
 
       <p style={{ textAlign: 'center', fontSize: '11px', color: '#aaa', marginTop: '20px' }}>
         Secure payments powered by Stripe. Cancel anytime.
       </p>
+        </>
+      )}
+
+      {hasPaid && (
+        <div style={{ marginTop: '16px' }}>
+          <button
+            onClick={handleSubscription}
+            disabled={subscriptionLoading}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '1px solid #e0e0e0',
+              borderRadius: '8px',
+              backgroundColor: '#ffffff',
+              color: '#333',
+              fontWeight: 600,
+              fontSize: '14px',
+              cursor: subscriptionLoading ? 'not-allowed' : 'pointer',
+              opacity: subscriptionLoading ? 0.7 : 1,
+            }}
+          >
+            {subscriptionLoading ? 'Opening...' : '⚙ Manage Subscription'}
+          </button>
+        </div>
+      )}
+
+      {/* Support info — always visible */}
+      <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px', fontSize: '12px', color: '#555', lineHeight: '1.6' }}>
+        <p style={{ margin: '0 0 6px 0' }}>
+          If you are facing any issue then contact us at{' '}
+          <a href="mailto:webercraftofficial@gmail.com" style={{ color: '#4262ff', textDecoration: 'none', fontWeight: 600 }}>
+            webercraftofficial@gmail.com
+          </a>
+        </p>
+        {userId && (
+          <p style={{ margin: 0, color: '#888' }}>
+            User ID: <span style={{ fontFamily: 'monospace', userSelect: 'all', color: '#555' }}>{userId}</span>
+          </p>
+        )}
+      </div>
     </div>
   );
 };
