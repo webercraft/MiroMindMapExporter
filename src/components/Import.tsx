@@ -1,8 +1,8 @@
 'use client';
 import {FC, useState, useMemo} from 'react';
 import {useDropzone} from 'react-dropzone';
-import {parseCsv} from '../utils/csvUtils';
-import {createMindmap} from '../utils/mindmapUtils';
+import {parseCsv, parseOpml, parseJsonMindmap} from '../utils/csvUtils';
+import {createMindmap, createMindmapFromNode} from '../utils/mindmapUtils';
 
 const dropzoneStyles = {
   display: 'flex',
@@ -28,6 +28,10 @@ export const Import: FC<{ creditsDisabled?: boolean; onImportSuccess?: () => voi
   const dropzone = useDropzone({
     accept: {
       'text/csv': ['.csv'],
+      'text/x-opml': ['.opml'],
+      'application/xml': ['.opml'],
+      'text/xml': ['.opml'],
+      'application/json': ['.json'],
     },
     maxFiles: 1,
     onDrop: (droppedFiles: File[]) => {
@@ -49,8 +53,17 @@ export const Import: FC<{ creditsDisabled?: boolean; onImportSuccess?: () => voi
     const failed = [];
     for (const file of files) {
       try {
-        const contents = await parseCsv(file);
-        await createMindmap(contents);
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (ext === 'opml') {
+          const node = await parseOpml(file);
+          await createMindmapFromNode(node);
+        } else if (ext === 'json') {
+          const node = await parseJsonMindmap(file);
+          await createMindmapFromNode(node);
+        } else {
+          const contents = await parseCsv(file);
+          await createMindmap(contents);
+        }
         setSuccess(`Mind map created successfully from ${file.name}`);
         if (onImportSuccess) onImportSuccess();
       } catch (e) {
@@ -81,14 +94,14 @@ export const Import: FC<{ creditsDisabled?: boolean; onImportSuccess?: () => voi
 
   return (
     <div style={{padding: '20px'}}>
-      <h2>Import Mind Map from CSV</h2>
+      <h2>Import Mind Map</h2>
       {creditsDisabled && (
         <div style={{ padding: '10px', backgroundColor: '#f8d7da', color: '#721c24', marginBottom: '16px', borderRadius: '4px', border: '1px solid #f5c6cb', fontWeight: 600 }}>
           🚫 You have no credits remaining. Upgrade your plan to continue importing.
         </div>
       )}
       <p style={{marginBottom: '20px', fontSize: '14px', color: '#666'}}>
-        Select your CSV file to import it as a mind map
+        Select a CSV, OPML, or JSON file to import it as a mind map
       </p>
 
       {error && (
@@ -125,7 +138,7 @@ export const Import: FC<{ creditsDisabled?: boolean; onImportSuccess?: () => voi
       }}>
         <input {...(!creditsDisabled ? dropzone.getInputProps() : {})} disabled={creditsDisabled} />
         {dropzone.isDragAccept ? (
-          <p style={{margin: 0}}>Drop your CSV file here</p>
+          <p style={{margin: 0}}>Drop your file here</p>
         ) : (
           <>
             <div>
@@ -135,9 +148,9 @@ export const Import: FC<{ creditsDisabled?: boolean; onImportSuccess?: () => voi
                 style={{marginBottom: '10px'}}
                 disabled={creditsDisabled}
               >
-                Select CSV file
+                Select file
               </button>
-              <p style={{margin: 0}}>Or drop your CSV file here</p>
+              <p style={{margin: 0}}>Or drop your CSV, OPML, or JSON file here</p>
             </div>
           </>
         )}
@@ -175,18 +188,41 @@ export const Import: FC<{ creditsDisabled?: boolean; onImportSuccess?: () => voi
         borderRadius: '4px',
         fontSize: '13px'
       }}>
-        <h4 style={{marginTop: 0}}>CSV Format Example:</h4>
-        <p>Each row represents a path from root to child node:</p>
-        <pre style={{
-          backgroundColor: 'white',
-          padding: '10px',
-          borderRadius: '4px',
-          overflow: 'auto'
-        }}>
+        <h4 style={{marginTop: 0}}>Supported Formats:</h4>
+
+        <p><strong>CSV</strong> — each row is a path from root to child:</p>
+        <pre style={{backgroundColor: 'white', padding: '10px', borderRadius: '4px', overflow: 'auto'}}>
 {`Root,Category 1,Item 1
 Root,Category 1,Item 2
-Root,Category 2,Item 3
-Root,Category 2,Item 4`}
+Root,Category 2,Item 3`}
+        </pre>
+
+        <p><strong>OPML</strong> — standard outline XML (e.g. exported from mind map tools):</p>
+        <pre style={{backgroundColor: 'white', padding: '10px', borderRadius: '4px', overflow: 'auto'}}>
+{`<opml version="2.0">
+  <body>
+    <outline text="Root">
+      <outline text="Category 1">
+        <outline text="Item 1"/>
+      </outline>
+    </outline>
+  </body>
+</opml>`}
+        </pre>
+
+        <p><strong>JSON</strong> — nested tree with <code>text</code> and <code>children</code>:</p>
+        <pre style={{backgroundColor: 'white', padding: '10px', borderRadius: '4px', overflow: 'auto'}}>
+{`{
+  "text": "Root",
+  "children": [
+    {
+      "text": "Category 1",
+      "children": [
+        { "text": "Item 1" }
+      ]
+    }
+  ]
+}`}
         </pre>
       </div>
     </div>

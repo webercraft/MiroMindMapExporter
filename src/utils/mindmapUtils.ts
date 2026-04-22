@@ -1,4 +1,5 @@
 import { DSVRowArray } from 'd3-dsv';
+import { MindmapNode } from './csvUtils';
 
 interface Node {
   nodeView: { content: string };
@@ -53,4 +54,13 @@ export const createMindmap = async (contents: DSVRowArray<string>) => {
   } else {
     throw new Error('Failed to create mind map: No root node created');
   }
+};
+
+/**
+ * Create mindmap directly from a pre-built node tree (used for OPML/JSON imports)
+ *
+ * @param root The root MindmapNode
+ */
+export const createMindmapFromNode = async (root: MindmapNode) => {
+  await miro.board.experimental.createMindmapNode(root);
 };

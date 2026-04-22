@@ -34,22 +34,22 @@ export async function GET() {
       }
     }
 
-    if (userId!.team) {
-      const { data, error } = await supabase
-        .from(process.env.TeamTable!)
-        .select('*')
-        .eq('team_id', userId!.team)
+    // if (userId!.team) {
+    //   const { data, error } = await supabase
+    //     .from(process.env.TeamTable!)
+    //     .select('*')
+    //     .eq('team_id', userId!.team)
 
-        if(error){
-          console.log(error)
-        }
-      if (!data || data.length == 0) {
-        await supabase.from(process.env.TeamTable!).upsert({
-          user_id: userId!.user,
-          team_id: userId!.team
-        })
-      }
-    }
+    //     if(error){
+    //       console.log(error)
+    //     }
+    //   if (!data || data.length == 0) {
+    //     await supabase.from(process.env.TeamTable!).upsert({
+    //       user_id: userId!.user,
+    //       team_id: userId!.team
+    //     })
+    //   }
+    // }
 
 
 
